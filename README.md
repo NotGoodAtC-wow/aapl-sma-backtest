@@ -11,10 +11,22 @@ multi-asset checks, and long-only return enhancement variants.
 
 This project is for research and education only. It is not investment advice.
 
+## Current Status
+
+The project started as a single AAPL SMA crossover backtest. It now includes a
+research workflow that stress-tests the strategy across transaction costs,
+parameter choices, train/test periods, walk-forward windows, and a small
+multi-asset universe.
+
+The latest run shows a clear improvement over the original `SMA 20/100` timing
+rule, but the strategy still does not prove persistent alpha versus buy-and-hold.
+It is currently more useful as a risk-management and research baseline than as a
+finished trading model.
+
 ## Project Contents
 
 - `main.py` - CLI entrypoint for downloading data and running the backtest.
-- `research.py` - CLI entrypoint for the v2 robustness research workflow.
+- `research.py` - CLI entrypoint for the robustness research workflow.
 - `configs/research_v2.yaml` - default research experiment configuration.
 - `src/quant_backtest/` - data loading, strategy, metrics, and charting code.
 - `scripts/create_visual_report.py` - creates the model forecast PNG and Excel-ready CSV.
@@ -67,6 +79,22 @@ The v2 research command writes:
 - `outputs/research_report.xlsx`
 - PNG charts for baseline, costs, heatmaps, train/test, multi-asset, and leaderboard.
 
+## Research Notes
+
+The latest research run found:
+
+- the original `SMA 20/100` strategy is profitable but materially lags AAPL
+  buy-and-hold;
+- the parameter sweep selected a faster `SMA 5/50` region that improves CAGR,
+  Sharpe, and drawdown on the full sample;
+- transaction cost sensitivity is acceptable across `0-50 bps`, but the faster
+  model has higher turnover;
+- out-of-sample performance remains weaker than buy-and-hold by CAGR and Sharpe;
+- SPY/QQQ fallback variants improve raw return, but their turnover is too high
+  to pass the current robustness filter.
+
+See `docs/research_summary.md` for a fuller interpretation.
+
 ## Create Reports
 
 ```powershell
@@ -104,4 +132,4 @@ this AAPL period.
 - The strategy uses adjusted close when available.
 - Signals are shifted by one day to avoid lookahead bias.
 - The `--end` argument is exclusive because Yahoo Finance treats it that way.
-- v2 intentionally does not add shorts; it focuses on validating and improving long-only signals first.
+- The current research intentionally avoids shorts; it focuses on validating and improving long-only signals first.
