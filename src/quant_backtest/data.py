@@ -1,0 +1,64 @@
+from __future__ import annotations
+
+from datetime import date
+
+import pandas as pd
+import yfinance as yf
+
+
+REQUIRED_COLUMNS = ("Open", "High", "Low", "Close", "Volume")
+
+
+def download_ohlcv(ticker: str, start: str, end: str | None = None) -> pd.DataFrame:
+    """Download daily OHLCV data and return a clean single-ticker DataFrame."""
+    normalized_ticker = ticker.strip().upper()
+    if not normalized_ticker:
+        raise ValueError("Ticker must not be empty.")
+
+    data = yf.download(
+        normalized_ticker,
+        start=start,
+        end=end,
+        auto_adjust=False,
+        progress=False,
+        threads=False,
+    )
+    if data.empty:
+        raise ValueError(f"No price data returned for {normalized_ticker}.")
+
+    data = _flatten_yfinance_columns(data, normalized_ticker)
+    missing = [column for column in REQUIRED_COLUMNS if column not in data.columns]
+    if missing:
+        raise ValueError(f"Missing expected columns from data source: {missing}")
+
+    if "Adj Close" not in data.columns:
+        data["Adj Close"] = data["Close"]
+
+    data = data.sort_index()
+    data.index = pd.to_datetime(data.index)
+    data.index.name = "Date"
+    return data
+
+
+def default_end_date() -> str:
+    """Use an exclusive end date so yfinance includes the latest completed day."""
+    return date.today().isoformat()
+
+
+def _flatten_yfinance_columns(data: pd.DataFrame, ticker: str) -> pd.DataFrame:
+    if not isinstance(data.columns, pd.MultiIndex):
+        return data.copy()
+
+    columns = data.columns
+    ticker_upper = ticker.upper()
+
+    for level in range(columns.nlevels):
+        level_values = [str(value).upper() for value in columns.get_level_values(level)]
+        if ticker_upper in level_values:
+            return data.xs(ticker, axis=1, level=level, drop_level=True).copy()
+
+    first_level = set(str(value) for value in columns.get_level_values(0))
+    if {"Open", "High", "Low", "Close"}.issubset(first_level):
+        return data.droplevel(1, axis=1).copy()
+
+    raise ValueError("Could not normalize yfinance MultiIndex columns.")

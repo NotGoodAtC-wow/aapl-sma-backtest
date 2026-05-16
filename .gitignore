@@ -1,0 +1,9 @@
+.venv/
+node_modules/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+_old_onedrive_copy/
+outputs/dashboard_preview.png
+.DS_Store
+Thumbs.db
