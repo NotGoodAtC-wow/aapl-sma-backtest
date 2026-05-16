@@ -40,6 +40,21 @@ def download_ohlcv(ticker: str, start: str, end: str | None = None) -> pd.DataFr
     return data
 
 
+def download_adjusted_close(
+    tickers: list[str],
+    start: str,
+    end: str | None = None,
+) -> pd.DataFrame:
+    prices: dict[str, pd.Series] = {}
+    for ticker in tickers:
+        data = download_ohlcv(ticker=ticker, start=start, end=end)
+        column = "Adj Close" if "Adj Close" in data.columns else "Close"
+        prices[ticker.strip().upper()] = data[column].rename(ticker.strip().upper())
+    frame = pd.DataFrame(prices).sort_index()
+    frame.index.name = "Date"
+    return frame.dropna(how="all")
+
+
 def default_end_date() -> str:
     """Use an exclusive end date so yfinance includes the latest completed day."""
     return date.today().isoformat()

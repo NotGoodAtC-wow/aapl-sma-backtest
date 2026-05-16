@@ -1,0 +1,38 @@
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT / "src"))
+
+from quant_backtest.experiments import load_research_config, run_research
+from quant_backtest.reports import save_research_outputs
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Run the v2 robustness research framework.")
+    parser.add_argument("--config", default="configs/research_v2.yaml", help="Path to research YAML config.")
+    parser.add_argument("--output-dir", default=None, help="Override output directory.")
+    parser.add_argument("--fixture-data", action="store_true", help="Use deterministic synthetic data.")
+    parser.add_argument("--no-download", action="store_true", help="Alias for --fixture-data for CI/smoke tests.")
+    return parser.parse_args()
+
+
+def main() -> None:
+    args = parse_args()
+    config = load_research_config(Path(args.config))
+    if args.output_dir:
+        config = config.__class__(**{**config.__dict__, "output_dir": args.output_dir})
+
+    result = run_research(config, fixture_data=args.fixture_data or args.no_download)
+    output_dir = Path(config.output_dir)
+    save_research_outputs(result, output_dir)
+
+    print(f"Wrote research outputs to: {output_dir}")
+    print(result.model_leaderboard.head(10).to_string(index=False))
+
+
+if __name__ == "__main__":
+    main()

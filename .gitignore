@@ -5,5 +5,7 @@ __pycache__/
 .pytest_cache/
 _old_onedrive_copy/
 outputs/dashboard_preview.png
+outputs_fixture/
+outputs_smoke/
 .DS_Store
 Thumbs.db

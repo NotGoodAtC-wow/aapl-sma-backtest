@@ -1,15 +1,21 @@
-# AAPL SMA Crossover Backtest
+# AAPL SMA Robustness Research
 
 Educational quantitative analysis project for Apple Inc. (`AAPL`). It downloads
 daily market data, tests a long-only SMA 20 / SMA 100 crossover strategy, applies
 10 bps transaction costs on position changes, and compares the strategy with a
 buy-and-hold benchmark.
 
+Version 2 expands the project into a robustness research framework: transaction
+cost sensitivity, parameter sweeps, train/test validation, walk-forward tests,
+multi-asset checks, and long-only return enhancement variants.
+
 This project is for research and education only. It is not investment advice.
 
 ## Project Contents
 
 - `main.py` - CLI entrypoint for downloading data and running the backtest.
+- `research.py` - CLI entrypoint for the v2 robustness research workflow.
+- `configs/research_v2.yaml` - default research experiment configuration.
 - `src/quant_backtest/` - data loading, strategy, metrics, and charting code.
 - `scripts/create_visual_report.py` - creates the model forecast PNG and Excel-ready CSV.
 - `scripts/create_excel_report.py` - creates the Excel dashboard from generated CSV files.
@@ -34,6 +40,32 @@ The command writes:
 - `outputs/equity_curve.csv`
 - `outputs/metrics.csv`
 - `outputs/aapl_sma_backtest.png`
+
+## Run Robustness Research
+
+Full run using Yahoo Finance data:
+
+```powershell
+.\.venv\Scripts\python research.py --config configs\research_v2.yaml
+```
+
+Offline smoke run using deterministic fixture data:
+
+```powershell
+.\.venv\Scripts\python research.py --config configs\research_v2.yaml --no-download --output-dir outputs_fixture
+```
+
+The v2 research command writes:
+
+- `outputs/base_backtest.csv`
+- `outputs/cost_sensitivity.csv`
+- `outputs/parameter_sweep.csv`
+- `outputs/train_test_results.csv`
+- `outputs/walk_forward_results.csv`
+- `outputs/multi_asset_results.csv`
+- `outputs/model_leaderboard.csv`
+- `outputs/research_report.xlsx`
+- PNG charts for baseline, costs, heatmaps, train/test, multi-asset, and leaderboard.
 
 ## Create Reports
 
@@ -72,3 +104,4 @@ this AAPL period.
 - The strategy uses adjusted close when available.
 - Signals are shifted by one day to avoid lookahead bias.
 - The `--end` argument is exclusive because Yahoo Finance treats it that way.
+- v2 intentionally does not add shorts; it focuses on validating and improving long-only signals first.

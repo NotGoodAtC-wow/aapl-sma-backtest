@@ -1,0 +1,43 @@
+period:
+  start: 2015-01-01
+  end: latest
+initial_capital: 10000
+base_ticker: AAPL
+universe:
+  - AAPL
+  - MSFT
+  - NVDA
+  - AMZN
+  - META
+  - GOOGL
+  - SPY
+  - QQQ
+cost_bps:
+  - 0
+  - 5
+  - 10
+  - 20
+  - 50
+sma_grid:
+  short:
+    - 5
+    - 10
+    - 20
+    - 30
+    - 50
+  long:
+    - 50
+    - 100
+    - 150
+    - 200
+train_test:
+  train_start: 2015-01-01
+  train_end: 2020-12-31
+  test_start: 2021-01-01
+  test_end: latest
+walk_forward:
+  train_years: 3
+  test_years: 1
+  step_years: 1
+spread_threshold: 0.01
+output_dir: outputs

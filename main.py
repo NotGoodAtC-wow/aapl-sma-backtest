@@ -66,12 +66,30 @@ def main() -> None:
 
 def _format_metrics_for_console(metrics):
     display = metrics.copy()
-    percent_columns = ["total_return", "cagr", "ann_volatility", "max_drawdown", "win_rate"]
+    percent_columns = [
+        "total_return",
+        "cagr",
+        "ann_volatility",
+        "max_drawdown",
+        "win_rate",
+        "exposure",
+        "average_trade_return",
+        "average_win",
+        "average_loss",
+        "cost_drag",
+        "excess_cagr_vs_benchmark",
+        "drawdown_improvement_vs_benchmark",
+    ]
     for column in percent_columns:
-        display[column] = display[column].map(lambda value: "" if value != value else f"{value * 100:.2f}%")
+        if column in display.columns:
+            display[column] = display[column].map(lambda value: "" if value != value else f"{value * 100:.2f}%")
 
-    display["sharpe"] = display["sharpe"].map(lambda value: "" if value != value else f"{value:.2f}")
-    display["trades"] = display["trades"].map(lambda value: "" if value != value else f"{int(value)}")
+    decimal_columns = ["sharpe", "sortino", "calmar", "turnover", "profit_factor"]
+    for column in decimal_columns:
+        if column in display.columns:
+            display[column] = display[column].map(lambda value: "" if value != value else f"{value:.2f}")
+    if "trades" in display.columns:
+        display["trades"] = display["trades"].map(lambda value: "" if value != value else f"{int(value)}")
     return display.to_string()
 
 

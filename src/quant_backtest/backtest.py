@@ -5,7 +5,13 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
-from .metrics import drawdown_series, metrics_table, summarize_performance
+from .metrics import (
+    annualized_turnover,
+    drawdown_series,
+    exposure_percentage,
+    metrics_table,
+    summarize_performance,
+)
 
 
 @dataclass(frozen=True)
@@ -71,6 +77,12 @@ def run_sma_backtest(prices: pd.DataFrame, config: BacktestConfig) -> BacktestRe
                 trades=trade_count,
                 win_rate=win_rate,
                 risk_free_rate=config.risk_free_rate,
+                exposure=exposure_percentage(equity_curve["position"]),
+                turnover=annualized_turnover(equity_curve["trade"]),
+                closed_trade_returns=closed_trade_returns,
+                gross_equity=config.initial_capital
+                * (1.0 + equity_curve["position"] * equity_curve["asset_return"]).cumprod(),
+                benchmark_equity=equity_curve["buy_hold_equity"],
             ),
             summarize_performance(
                 "buy_hold",
@@ -79,6 +91,8 @@ def run_sma_backtest(prices: pd.DataFrame, config: BacktestConfig) -> BacktestRe
                 trades=1,
                 win_rate=None,
                 risk_free_rate=config.risk_free_rate,
+                exposure=1.0,
+                turnover=0.0,
             ),
         ]
     )
