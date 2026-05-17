@@ -9,7 +9,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import pandas as pd
 from openpyxl import Workbook
-from openpyxl.chart import BarChart, LineChart, Reference
+from openpyxl.chart import BarChart, Reference
 from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.table import Table, TableStyleInfo
@@ -25,6 +25,12 @@ CSV_OUTPUTS = {
     "walk_forward_results.csv": "walk_forward_results",
     "multi_asset_results.csv": "multi_asset_results",
     "model_leaderboard.csv": "model_leaderboard",
+    "hysteresis_sweep.csv": "hysteresis_sweep",
+    "allocation_leaderboard.csv": "allocation_leaderboard",
+    "capture_analysis.csv": "capture_analysis",
+    "turnover_analysis.csv": "turnover_analysis",
+    "v03_comparison.csv": "v03_comparison",
+    "v03_cost_sensitivity.csv": "v03_cost_sensitivity",
 }
 
 
@@ -37,6 +43,13 @@ def save_research_outputs(result: ResearchResult, output_dir: Path) -> None:
     result.walk_forward_results.to_csv(output_dir / "walk_forward_results.csv", index=False)
     result.multi_asset_results.to_csv(output_dir / "multi_asset_results.csv", index=False)
     result.model_leaderboard.to_csv(output_dir / "model_leaderboard.csv", index=False)
+    result.hysteresis_sweep.to_csv(output_dir / "hysteresis_sweep.csv", index=False)
+    result.allocation_leaderboard.to_csv(output_dir / "allocation_leaderboard.csv", index=False)
+    result.capture_analysis.to_csv(output_dir / "capture_analysis.csv", index=False)
+    result.turnover_analysis.to_csv(output_dir / "turnover_analysis.csv", index=False)
+    result.v03_comparison.to_csv(output_dir / "v03_comparison.csv", index=False)
+    result.v03_cost_sensitivity.to_csv(output_dir / "v03_cost_sensitivity.csv", index=False)
+    result.v03_curve.to_csv(output_dir / "v03_selected_curve.csv", index_label="Date")
 
     save_research_plots(result, output_dir)
     save_research_workbook(result, output_dir / "research_report.xlsx")
@@ -60,6 +73,12 @@ def save_research_plots(result: ResearchResult, output_dir: Path) -> None:
     _plot_train_test(result.train_test_results, output_dir / "train_test.png")
     _plot_multi_asset(result.multi_asset_results, output_dir / "multi_asset_comparison.png")
     _plot_leaderboard(result.model_leaderboard, output_dir / "leaderboard_top_models.png")
+    _plot_v03_equity_drawdown(result.v03_curve, output_dir / "v03_equity_drawdown.png")
+    _plot_turnover_scatter(result.turnover_analysis, output_dir / "turnover_vs_sharpe.png")
+    _plot_capture(result.capture_analysis, output_dir / "capture_ratio.png")
+    _plot_allocation_exposure(result.v03_curve, output_dir / "allocation_exposure.png")
+    _plot_v03_cost_sensitivity(result.v03_cost_sensitivity, output_dir / "v03_cost_sensitivity.png")
+    _plot_v03_entry_exit_signals(result.v03_curve, output_dir / "v03_entry_exit_signals.png")
 
 
 def save_research_workbook(result: ResearchResult, output_path: Path) -> None:
@@ -74,6 +93,12 @@ def save_research_workbook(result: ResearchResult, output_path: Path) -> None:
         "Walk Forward": result.walk_forward_results,
         "Multi Asset": result.multi_asset_results,
         "Model Leaderboard": result.model_leaderboard,
+        "Hysteresis Sweep": result.hysteresis_sweep,
+        "Allocation Leaderboard": result.allocation_leaderboard,
+        "Capture Analysis": result.capture_analysis,
+        "Turnover Analysis": result.turnover_analysis,
+        "v0.3 Comparison": result.v03_comparison,
+        "v0.3 Costs": result.v03_cost_sensitivity,
         "Raw Results": _raw_results(result),
     }
 
@@ -163,15 +188,128 @@ def _plot_leaderboard(table: pd.DataFrame, output_path: Path) -> None:
     plt.close(fig)
 
 
+def _plot_v03_equity_drawdown(curve: pd.DataFrame, output_path: Path) -> None:
+    if curve.empty:
+        return
+    fig, axes = plt.subplots(2, 1, figsize=(12, 8), sharex=True)
+    axes[0].plot(curve.index, curve["strategy_equity"], label="selected v3")
+    axes[0].plot(curve.index, curve["buy_hold_equity"], label="AAPL buy and hold")
+    axes[0].set_title("v0.3 selected model equity")
+    axes[0].grid(alpha=0.25)
+    axes[0].legend()
+    axes[1].plot(curve.index, curve["strategy_drawdown"], label="selected v3 drawdown")
+    axes[1].plot(curve.index, curve["buy_hold_drawdown"], label="AAPL drawdown")
+    axes[1].set_title("v0.3 selected model drawdown")
+    axes[1].grid(alpha=0.25)
+    axes[1].legend()
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=150)
+    plt.close(fig)
+
+
+def _plot_turnover_scatter(table: pd.DataFrame, output_path: Path) -> None:
+    if table.empty:
+        return
+    fig, axis = plt.subplots(figsize=(10, 6))
+    for source, group in table.groupby("source"):
+        axis.scatter(group["turnover"], group["sharpe"], label=source, alpha=0.75)
+    axis.set_title("Turnover vs Sharpe")
+    axis.set_xlabel("Annualized turnover")
+    axis.set_ylabel("Sharpe")
+    axis.grid(alpha=0.25)
+    axis.legend()
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=150)
+    plt.close(fig)
+
+
+def _plot_capture(table: pd.DataFrame, output_path: Path) -> None:
+    if table.empty:
+        return
+    fig, axis = plt.subplots(figsize=(10, 6))
+    table.plot(kind="bar", x="model", y=["upside_capture", "downside_capture"], ax=axis)
+    axis.set_title("Capture ratios vs AAPL")
+    axis.grid(alpha=0.25, axis="y")
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=150)
+    plt.close(fig)
+
+
+def _plot_allocation_exposure(curve: pd.DataFrame, output_path: Path) -> None:
+    if curve.empty or "position" not in curve.columns:
+        return
+    fig, axis = plt.subplots(figsize=(12, 4))
+    axis.plot(curve.index, curve["position"], label="AAPL exposure")
+    if "fallback_position" in curve.columns:
+        axis.plot(curve.index, curve["fallback_position"], label="fallback exposure")
+    axis.set_title("Selected model exposure")
+    axis.set_ylim(-0.05, 1.05)
+    axis.grid(alpha=0.25)
+    axis.legend()
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=150)
+    plt.close(fig)
+
+
+def _plot_v03_cost_sensitivity(table: pd.DataFrame, output_path: Path) -> None:
+    if table.empty:
+        return
+    ordered = table.sort_values("cost_bps")
+    fig, axis = plt.subplots(figsize=(9, 5))
+    axis.plot(ordered["cost_bps"], ordered["cagr"], marker="o", label="CAGR")
+    axis.plot(ordered["cost_bps"], ordered["sharpe"], marker="s", linestyle="--", label="Sharpe")
+    axis.set_title("v0.3 selected model cost sensitivity")
+    axis.set_xlabel("Cost assumption, bps")
+    axis.grid(alpha=0.25)
+    axis.legend()
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=150)
+    plt.close(fig)
+
+
+def _plot_v03_entry_exit_signals(curve: pd.DataFrame, output_path: Path) -> None:
+    if curve.empty or "price" not in curve.columns or "position" not in curve.columns:
+        return
+
+    position_change = curve["position"].diff().fillna(curve["position"])
+    entries = curve[position_change > 0]
+    exits = curve[position_change < 0]
+
+    fig, axes = plt.subplots(2, 1, figsize=(13, 8), sharex=True, height_ratios=[3, 1])
+    axes[0].plot(curve.index, curve["price"], label="AAPL price", color="#111827", linewidth=1.4)
+    if "short_sma" in curve.columns:
+        axes[0].plot(curve.index, curve["short_sma"], label="Short SMA", color="#2563EB", linewidth=1.0, alpha=0.85)
+    if "long_sma" in curve.columns:
+        axes[0].plot(curve.index, curve["long_sma"], label="Long SMA", color="#F59E0B", linewidth=1.0, alpha=0.85)
+    axes[0].scatter(entries.index, entries["price"], marker="^", s=80, color="#16A34A", label="Entry", zorder=5)
+    axes[0].scatter(exits.index, exits["price"], marker="v", s=80, color="#DC2626", label="Exit", zorder=5)
+    axes[0].set_title("Selected v0.3 model: AAPL entries and exits")
+    axes[0].set_ylabel("Adjusted price")
+    axes[0].grid(alpha=0.25)
+    axes[0].legend(loc="upper left", ncols=3)
+
+    axes[1].step(curve.index, curve["position"], where="post", color="#2563EB", label="AAPL exposure")
+    if "fallback_position" in curve.columns and curve["fallback_position"].abs().sum() > 0:
+        axes[1].step(curve.index, curve["fallback_position"], where="post", color="#7C3AED", label="Fallback exposure")
+    axes[1].set_ylabel("Weight")
+    axes[1].set_ylim(-0.05, 1.05)
+    axes[1].grid(alpha=0.25)
+    axes[1].legend(loc="upper left")
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=150)
+    plt.close(fig)
+
+
 def _write_dashboard(sheet, result: ResearchResult) -> None:
     sheet.sheet_view.showGridLines = False
-    sheet["A1"] = "AAPL SMA Research Framework v2"
+    sheet["A1"] = "AAPL Trend Allocation Research Framework"
     sheet["A1"].font = Font(size=18, bold=True, color="FFFFFF")
     sheet["A1"].fill = PatternFill("solid", fgColor="0F172A")
     sheet.merge_cells("A1:H1")
 
     baseline = result.base_backtest.iloc[0]
     best = result.model_leaderboard.iloc[0]
+    selected = result.v03_comparison[result.v03_comparison["model"] == "selected_v3"].iloc[0]
     summary = [
         ["Baseline CAGR", baseline["cagr"]],
         ["Baseline Sharpe", baseline["sharpe"]],
@@ -179,6 +317,9 @@ def _write_dashboard(sheet, result: ResearchResult) -> None:
         ["Best Variant", best["variant"]],
         ["Best Variant CAGR", best["cagr"]],
         ["Best Variant Sharpe", best["sharpe"]],
+        ["Selected v0.3 Variant", selected["variant"]],
+        ["Selected v0.3 CAGR", selected["cagr"]],
+        ["Selected v0.3 Turnover", selected["turnover"]],
     ]
     for row_idx, row in enumerate(summary, start=3):
         sheet.cell(row_idx, 1, row[0])
@@ -236,6 +377,12 @@ def _raw_results(result: ResearchResult) -> pd.DataFrame:
             result.walk_forward_results.assign(source="walk_forward"),
             result.multi_asset_results.assign(source="multi_asset"),
             result.model_leaderboard.assign(source="leaderboard"),
+            result.hysteresis_sweep.assign(source="hysteresis_sweep"),
+            result.allocation_leaderboard.assign(source="allocation_leaderboard"),
+            result.capture_analysis.assign(source="capture_analysis"),
+            result.turnover_analysis.assign(source="turnover_analysis"),
+            result.v03_comparison.assign(source="v03_comparison"),
+            result.v03_cost_sensitivity.assign(source="v03_cost_sensitivity"),
         ],
         ignore_index=True,
         sort=False,

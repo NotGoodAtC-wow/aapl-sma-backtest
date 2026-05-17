@@ -1,4 +1,6 @@
 .venv/
+.cache/
+.idea/
 node_modules/
 __pycache__/
 *.py[cod]
@@ -6,6 +8,9 @@ __pycache__/
 _old_onedrive_copy/
 outputs/dashboard_preview.png
 outputs_fixture/
+outputs_fixture_v2/
+outputs_fixture_v3/
 outputs_smoke/
+.pytest_tmp/
 .DS_Store
 Thumbs.db

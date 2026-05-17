@@ -12,8 +12,8 @@ from quant_backtest.reports import save_research_outputs
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run the v2 robustness research framework.")
-    parser.add_argument("--config", default="configs/research_v2.yaml", help="Path to research YAML config.")
+    parser = argparse.ArgumentParser(description="Run the trend allocation research framework.")
+    parser.add_argument("--config", default="configs/research_v3.yaml", help="Path to research YAML config.")
     parser.add_argument("--output-dir", default=None, help="Override output directory.")
     parser.add_argument("--fixture-data", action="store_true", help="Use deterministic synthetic data.")
     parser.add_argument("--no-download", action="store_true", help="Alias for --fixture-data for CI/smoke tests.")

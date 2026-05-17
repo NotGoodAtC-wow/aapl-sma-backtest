@@ -112,6 +112,54 @@ def annualized_turnover(turnover: pd.Series) -> float:
     return float(clean.mean() * TRADING_DAYS_PER_YEAR)
 
 
+def years_between(index: pd.Index) -> float:
+    if len(index) < 2:
+        return math.nan
+    start = pd.Timestamp(index[0])
+    end = pd.Timestamp(index[-1])
+    years = (end - start).days / CALENDAR_DAYS_PER_YEAR
+    return float(years) if years > 0 else math.nan
+
+
+def trade_frequency_per_year(trades: int, index: pd.Index) -> float:
+    years = years_between(index)
+    if math.isnan(years) or years == 0:
+        return math.nan
+    return float(trades / years)
+
+
+def capture_ratio(strategy_returns: pd.Series, benchmark_returns: pd.Series, direction: str) -> float:
+    aligned_strategy, aligned_benchmark = strategy_returns.align(benchmark_returns, join="inner")
+    mask = aligned_benchmark > 0 if direction == "up" else aligned_benchmark < 0
+    if not mask.any():
+        return math.nan
+    benchmark_sum = aligned_benchmark[mask].sum()
+    if benchmark_sum == 0:
+        return math.nan
+    return float(aligned_strategy[mask].sum() / benchmark_sum)
+
+
+def missed_return_while_underweight(benchmark_returns: pd.Series, target_exposure: pd.Series) -> float:
+    aligned_returns, aligned_exposure = benchmark_returns.align(target_exposure, join="inner")
+    underweight = 1.0 - aligned_exposure.astype(float).clip(lower=0.0, upper=1.0)
+    return float((aligned_returns * underweight).sum())
+
+
+def holding_periods(position: pd.Series) -> pd.Series:
+    exposure = position.astype(float).fillna(0.0) > 0
+    periods: list[int] = []
+    current = 0
+    for is_exposed in exposure:
+        if is_exposed:
+            current += 1
+        elif current:
+            periods.append(current)
+            current = 0
+    if current:
+        periods.append(current)
+    return pd.Series(periods, dtype=float, name="holding_period_days")
+
+
 def trade_distribution(closed_trade_returns: pd.Series) -> dict[str, float]:
     clean = closed_trade_returns.dropna()
     if clean.empty:

@@ -5,9 +5,9 @@ daily market data, tests a long-only SMA 20 / SMA 100 crossover strategy, applie
 10 bps transaction costs on position changes, and compares the strategy with a
 buy-and-hold benchmark.
 
-Version 2 expands the project into a robustness research framework: transaction
-cost sensitivity, parameter sweeps, train/test validation, walk-forward tests,
-multi-asset checks, and long-only return enhancement variants.
+The current research version adds turnover-aware trend allocation: hysteresis,
+minimum holding periods, cooldown periods, regime-aware fallback variants,
+capture analysis, and a model selection score that penalizes excessive turnover.
 
 This project is for research and education only. It is not investment advice.
 
@@ -18,16 +18,17 @@ research workflow that stress-tests the strategy across transaction costs,
 parameter choices, train/test periods, walk-forward windows, and a small
 multi-asset universe.
 
-The latest run shows a clear improvement over the original `SMA 20/100` timing
-rule, but the strategy still does not prove persistent alpha versus buy-and-hold.
-It is currently more useful as a risk-management and research baseline than as a
-finished trading model.
+The latest run improves the selected model's turnover, cost drag, Sharpe, CAGR,
+and drawdown versus the earlier `SMA 5/50` long/cash variant, but it still does
+not beat AAPL buy-and-hold by raw CAGR. It is currently more useful as a
+risk-management and research baseline than as a finished trading model.
 
 ## Project Contents
 
 - `main.py` - CLI entrypoint for downloading data and running the backtest.
 - `research.py` - CLI entrypoint for the robustness research workflow.
-- `configs/research_v2.yaml` - default research experiment configuration.
+- `configs/research_v3.yaml` - default research experiment configuration.
+- `configs/research_v2.yaml` - previous robustness configuration, kept compatible.
 - `src/quant_backtest/` - data loading, strategy, metrics, and charting code.
 - `scripts/create_visual_report.py` - creates the model forecast PNG and Excel-ready CSV.
 - `scripts/create_excel_report.py` - creates the Excel dashboard from generated CSV files.
@@ -58,16 +59,16 @@ The command writes:
 Full run using Yahoo Finance data:
 
 ```powershell
-.\.venv\Scripts\python research.py --config configs\research_v2.yaml
+.\.venv\Scripts\python research.py --config configs\research_v3.yaml
 ```
 
 Offline smoke run using deterministic fixture data:
 
 ```powershell
-.\.venv\Scripts\python research.py --config configs\research_v2.yaml --no-download --output-dir outputs_fixture
+.\.venv\Scripts\python research.py --config configs\research_v3.yaml --no-download --output-dir outputs_fixture_v3
 ```
 
-The v2 research command writes:
+The research command writes CSV tables, charts, and an Excel workbook:
 
 - `outputs/base_backtest.csv`
 - `outputs/cost_sensitivity.csv`
@@ -76,8 +77,16 @@ The v2 research command writes:
 - `outputs/walk_forward_results.csv`
 - `outputs/multi_asset_results.csv`
 - `outputs/model_leaderboard.csv`
+- `outputs/hysteresis_sweep.csv`
+- `outputs/allocation_leaderboard.csv`
+- `outputs/capture_analysis.csv`
+- `outputs/turnover_analysis.csv`
+- `outputs/v03_comparison.csv`
+- `outputs/v03_selected_curve.csv`
 - `outputs/research_report.xlsx`
-- PNG charts for baseline, costs, heatmaps, train/test, multi-asset, and leaderboard.
+- PNG charts for baseline, costs, heatmaps, train/test, multi-asset,
+  leaderboard, v0.3 equity/drawdown, turnover, capture ratios, allocation
+  exposure, cost sensitivity, and entry/exit signals.
 
 ## Research Notes
 
@@ -85,13 +94,16 @@ The latest research run found:
 
 - the original `SMA 20/100` strategy is profitable but materially lags AAPL
   buy-and-hold;
-- the parameter sweep selected a faster `SMA 5/50` region that improves CAGR,
-  Sharpe, and drawdown on the full sample;
-- transaction cost sensitivity is acceptable across `0-50 bps`, but the faster
-  model has higher turnover;
-- out-of-sample performance remains weaker than buy-and-hold by CAGR and Sharpe;
-- SPY/QQQ fallback variants improve raw return, but their turnover is too high
-  to pass the current robustness filter.
+- the v2 parameter sweep selected a faster `SMA 5/50` region, but its turnover
+  was high out of sample;
+- the v0.3 selected model is `SMA 5/200` with hysteresis, a 10-day minimum hold,
+  and a 5-day cooldown;
+- the selected v0.3 model lowers annualized turnover from `8.41` to `1.68` on
+  the test period;
+- `outputs/v03_entry_exit_signals.png` shows the selected model's entries and
+  exits on top of the AAPL price/SMA chart;
+- SPY/QQQ fallback variants still improve raw return, but their turnover remains
+  too high for the current robustness filter.
 
 See `docs/research_summary.md` for a fuller interpretation.
 

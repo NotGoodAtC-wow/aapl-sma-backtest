@@ -66,17 +66,48 @@ The SPY and QQQ fallback variants improve raw return, especially on the test
 period, but they also raise turnover. They are promising research directions,
 not finished models.
 
+## v0.3 Turnover-Aware Model
+
+The next research pass added hysteresis, minimum holding periods, cooldown
+periods, regime-aware fallback variants, and a turnover-aware selection score.
+The selected model is:
+
+| Field | Value |
+| --- | --- |
+| Variant | `long_cash_hysteresis` |
+| SMA windows | `5 / 200` |
+| Entry threshold | `1.0%` |
+| Exit threshold | `-1.0%` |
+| Minimum hold | `10 trading days` |
+| Cooldown | `5 trading days` |
+
+On the test period, the selected model improves the v2 long/cash baseline:
+
+| Metric | v2 SMA 5/50 | v0.3 selected |
+| --- | ---: | ---: |
+| CAGR | 7.39% | 11.11% |
+| Sharpe | 0.51 | 0.66 |
+| Max drawdown | -23.08% | -23.62% |
+| Annualized turnover | 8.41 | 1.68 |
+| Cost drag | 6.75% | 1.58% |
+
+This is a cleaner model: it trades less, pays less cost, and captures more AAPL
+upside than the v2 `SMA 5/50` long/cash strategy. It still does not beat AAPL
+buy-and-hold by raw CAGR, so it should be treated as a stronger risk-managed
+baseline, not as a finished alpha model.
+
 The best current interpretation:
 
 - `SMA 5/50 long/cash` is a stronger baseline than `SMA 20/100`.
-- Fallback assets may reduce cash drag.
-- Turnover control is the next important research target.
+- `SMA 5/200` with hysteresis is a stronger low-turnover test-period candidate.
+- Fallback assets may reduce cash drag, but only if their turnover is controlled.
+- Turnover control is now built into model selection, not just reviewed after the fact.
 - Shorts should still wait until the long-only signal is stronger.
 
 ## Next Research Steps
 
-1. Add turnover-aware selection criteria directly into fallback variants.
-2. Test minimum holding periods and signal hysteresis to reduce whipsaw trades.
-3. Compare fallback assets with Treasury ETFs or cash yield assumptions.
-4. Expand regime analysis by bull, bear, and sideways markets.
+1. Improve fallback variants so they keep the v0.3 turnover discipline.
+2. Compare cash with Treasury ETFs or explicit cash-yield assumptions.
+3. Expand regime analysis by bull, bear, and sideways markets.
+4. Add volatility targeting after the trend signal is stable.
 5. Only consider shorts after long-only robustness improves.

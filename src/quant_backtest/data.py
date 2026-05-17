@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 from datetime import date
+from pathlib import Path
 
 import pandas as pd
 import yfinance as yf
 
 
 REQUIRED_COLUMNS = ("Open", "High", "Low", "Close", "Volume")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+YFINANCE_CACHE_DIR = PROJECT_ROOT / ".cache" / "yfinance"
+YFINANCE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+yf.set_tz_cache_location(str(YFINANCE_CACHE_DIR))
 
 
 def download_ohlcv(ticker: str, start: str, end: str | None = None) -> pd.DataFrame:
